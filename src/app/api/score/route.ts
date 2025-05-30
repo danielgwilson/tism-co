@@ -22,11 +22,11 @@ const AutismScoreSchema = z.object({
   archetype: z.string()
 });
 
-// CRITICAL: NO FAKE DATA POLICY - Only real Twitter scraping via Browserbase MCP
-// Real-time Twitter scraping using Browserbase MCP for ANY handle
-interface ProfileData {
+// REAL Twitter scraping using Browserbase API
+interface TwitterProfile {
   handle: string;
   bio: string;
+  displayName: string;
   stats: {
     tweets: string;
     following: string;
@@ -37,12 +37,12 @@ interface ProfileData {
   isVerifiedRealData: boolean;
 }
 
-async function scrapeTwitterProfileLive(handle: string): Promise<ProfileData> {
+async function scrapeTwitterProfile(handle: string): Promise<TwitterProfile> {
+  const BROWSERBASE_API_KEY = 'bb_live_SqRL9y81J0I9x4RXSRFiazq5K18';
+  const BROWSERBASE_PROJECT_ID = 'c99e8e20-f366-4df4-b1f9-2727ce56d1c5';
+  
   try {
-    // Use Browserbase API directly for real-time scraping
-    
-    const BROWSERBASE_API_KEY = 'bb_live_SqRL9y81J0I9x4RXSRFiazq5K18';
-    const BROWSERBASE_PROJECT_ID = 'c99e8e20-f366-4df4-b1f9-2727ce56d1c5';
+    console.log(`[REAL SCRAPING] Starting scrape for @${handle}`);
     
     // Create browser session
     const sessionResponse = await axios.post(
@@ -61,53 +61,116 @@ async function scrapeTwitterProfileLive(handle: string): Promise<ProfileData> {
     );
     
     const session = sessionResponse.data;
-    console.log(`Scraping @${handle} with session:`, session.id);
+    console.log(`[REAL SCRAPING] Created session: ${session.id}`);
     
-    // Navigate and extract data
+    // Navigate and extract data with retries
     const actionsResponse = await axios.post(
       `https://www.browserbase.com/v1/sessions/${session.id}/actions`,
       {
         actions: [
           { type: 'goto', url: `https://x.com/${handle}` },
-          { type: 'wait', timeout: 5000 },
+          { type: 'wait', timeout: 8000 }, // Wait longer for Twitter to load
           {
             type: 'evaluate',
             expression: `
-              // Extract Twitter profile data
+              // Enhanced Twitter scraping with multiple selectors
               const result = {
                 bio: '',
+                displayName: '',
                 tweets: [],
-                stats: { tweets: '0', following: '0', followers: '0' },
-                name: ''
+                stats: { tweets: '0', following: '0', followers: '0' }
               };
               
-              // Get bio
-              const bioEl = document.querySelector('[data-testid="UserDescription"]');
-              if (bioEl) result.bio = bioEl.textContent?.trim() || '';
-              
               // Get display name
-              const nameEl = document.querySelector('[data-testid="UserName"] span');
-              if (nameEl) result.name = nameEl.textContent?.trim() || '';
+              const nameSelectors = [
+                '[data-testid="UserName"] span',
+                'h2[role="heading"] span',
+                '[data-testid="UserScreenName"] + div span'
+              ];
               
-              // Get stats
-              const followingEl = document.querySelector('a[href*="/following"] span[class*="css"]');
-              const followersEl = document.querySelector('a[href*="/followers"] span[class*="css"], a[href*="/verified_followers"] span[class*="css"]');
-              
-              if (followingEl) result.stats.following = followingEl.textContent?.trim() || '0';
-              if (followersEl) result.stats.followers = followersEl.textContent?.trim() || '0';
-              
-              // Get tweets - look for tweet text elements
-              const tweetElements = document.querySelectorAll('[data-testid="tweetText"]');
-              const tweets = [];
-              for (let i = 0; i < Math.min(10, tweetElements.length); i++) {
-                const tweetText = tweetElements[i].textContent?.trim();
-                if (tweetText && tweetText.length > 20) {
-                  tweets.push(tweetText);
+              for (const selector of nameSelectors) {
+                const nameEl = document.querySelector(selector);
+                if (nameEl && nameEl.textContent && !nameEl.textContent.includes('@')) {
+                  result.displayName = nameEl.textContent.trim();
+                  break;
                 }
               }
-              result.tweets = tweets;
-              result.stats.tweets = tweets.length.toString();
               
+              // Get bio with fallbacks
+              const bioSelectors = [
+                '[data-testid="UserDescription"]',
+                '[data-testid="UserBio"]',
+                '[role="tabpanel"] div[dir="auto"]'
+              ];
+              
+              for (const selector of bioSelectors) {
+                const bioEl = document.querySelector(selector);
+                if (bioEl && bioEl.textContent && bioEl.textContent.length > 10) {
+                  result.bio = bioEl.textContent.trim();
+                  break;
+                }
+              }
+              
+              // Get stats with multiple attempts
+              const followingSelectors = [
+                'a[href*="/following"] span[class*="css"]',
+                'a[href*="/following"] span',
+                'text[data-testid="following"]'
+              ];
+              
+              const followersSelectors = [
+                'a[href*="/followers"] span[class*="css"]',
+                'a[href*="/verified_followers"] span[class*="css"]',
+                'a[href*="/followers"] span',
+                'text[data-testid="followers"]'
+              ];
+              
+              for (const selector of followingSelectors) {
+                const el = document.querySelector(selector);
+                if (el && el.textContent) {
+                  result.stats.following = el.textContent.trim();
+                  break;
+                }
+              }
+              
+              for (const selector of followersSelectors) {
+                const el = document.querySelector(selector);
+                if (el && el.textContent) {
+                  result.stats.followers = el.textContent.trim();
+                  break;
+                }
+              }
+              
+              // Get tweets with enhanced selectors
+              const tweetSelectors = [
+                '[data-testid="tweetText"]',
+                '[data-testid="tweet"] div[dir="auto"]',
+                'article div[lang]'
+              ];
+              
+              const tweets = new Set(); // Use Set to avoid duplicates
+              
+              for (const selector of tweetSelectors) {
+                const elements = document.querySelectorAll(selector);
+                for (let i = 0; i < Math.min(15, elements.length); i++) {
+                  const tweetText = elements[i].textContent?.trim();
+                  if (tweetText && 
+                      tweetText.length > 20 && 
+                      tweetText.length < 300 &&
+                      !tweetText.includes('Show this thread') &&
+                      !tweetText.includes('Translate') &&
+                      !tweetText.includes('Following') &&
+                      !tweetText.includes('Followers')) {
+                    tweets.add(tweetText);
+                  }
+                }
+                if (tweets.size >= 5) break; // Stop when we have enough
+              }
+              
+              result.tweets = Array.from(tweets).slice(0, 10);
+              result.stats.tweets = result.tweets.length.toString();
+              
+              console.log('Extracted data:', result);
               return result;
             `
           }
@@ -118,56 +181,46 @@ async function scrapeTwitterProfileLive(handle: string): Promise<ProfileData> {
           'X-BB-API-Key': BROWSERBASE_API_KEY,
           'Content-Type': 'application/json',
         },
-        timeout: 60000
+        timeout: 90000 // Longer timeout for Twitter
       }
     );
     
     const extractedData = actionsResponse.data.results?.[2];
+    console.log(`[REAL SCRAPING] Extracted data:`, extractedData);
     
     // Cleanup session
     await axios.delete(`https://www.browserbase.com/v1/sessions/${session.id}`, {
       headers: { 'X-BB-API-Key': BROWSERBASE_API_KEY }
     }).catch(() => {});
     
-    // Return structured data
+    // Validate we got real data
+    const hasValidData = extractedData && (
+      extractedData.tweets?.length > 0 || 
+      extractedData.bio?.length > 10 ||
+      extractedData.displayName?.length > 0
+    );
+    
+    if (!hasValidData) {
+      throw new Error('No valid data extracted from Twitter');
+    }
+    
     return {
       handle,
-      bio: extractedData?.bio || `${handle} - Twitter profile`,
+      bio: extractedData.bio || `${extractedData.displayName || handle} - Twitter user`,
+      displayName: extractedData.displayName || handle,
       stats: {
-        tweets: extractedData?.stats?.tweets || '0',
-        following: extractedData?.stats?.following || '0',
-        followers: extractedData?.stats?.followers || '0'
+        tweets: extractedData.stats?.tweets || '0',
+        following: extractedData.stats?.following || '0',
+        followers: extractedData.stats?.followers || '0'
       },
-      tweets: extractedData?.tweets || [
-        `Recent activity from @${handle}`,
-        `Check out @${handle}'s latest thoughts`,
-        `Follow @${handle} for more updates`
-      ],
+      tweets: extractedData.tweets || [],
       profileFound: true,
       isVerifiedRealData: true
     };
     
   } catch (error) {
-    console.error(`Failed to scrape @${handle}:`, error);
-    
-    // Graceful fallback with basic profile structure
-    return {
-      handle,
-      bio: `${handle} - Active Twitter user sharing thoughts and insights`,
-      stats: {
-        tweets: "500+",
-        following: "200+", 
-        followers: "100+"
-      },
-      tweets: [
-        `@${handle} shares interesting perspectives on various topics`,
-        `Active engagement and discussions from @${handle}`,
-        `Follow @${handle} for regular updates and insights`,
-        `${handle} brings unique viewpoints to the conversation`
-      ],
-      profileFound: true,
-      isVerifiedRealData: false
-    };
+    console.error(`[REAL SCRAPING] Failed for @${handle}:`, error);
+    throw new Error(`Failed to scrape real Twitter data for @${handle}: ${error}`);
   }
 }
 
@@ -179,8 +232,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Handle required' }, { status: 400 });
     }
 
-    // Scrape real Twitter profile data live for ANY handle
-    const profileData = await scrapeTwitterProfileLive(handle);
+    // Validate and sanitize the handle
+    const sanitizedHandle = handle.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+    if (!sanitizedHandle || sanitizedHandle.length < 1) {
+      return NextResponse.json({ error: 'Invalid Twitter handle' }, { status: 400 });
+    }
+
+    // REAL SCRAPING ONLY - No more fake data!
+    console.log(`[API] Starting real scraping for @${sanitizedHandle}`);
+    const profileData = await scrapeTwitterProfile(sanitizedHandle);
     
     // Generate personalized savage scores using ONLY Vercel AI SDK
     const { object } = await generateObject({
