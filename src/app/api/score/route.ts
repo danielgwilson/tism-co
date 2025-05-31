@@ -160,7 +160,7 @@ Following: ${profileData.stats.following}
 Total Tweets: ${profileData.stats.tweets}
 
 RECENT TWEETS:
-${profileData.tweets.slice(0, 15).map(tweet => `"${tweet}"`).join('\n')}
+${profileData.tweets.slice(0, 15).map((tweet: string) => `"${tweet}"`).join('\n')}
 
 REQUIREMENTS:
 1. Fill profileData object with the exact data provided above
