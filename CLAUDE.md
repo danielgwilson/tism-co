@@ -111,13 +111,13 @@ import { generateText, generateObject } from 'ai';
 
 // Text generation
 const { text } = await generateText({
-  model: anthropic('claude-3-5-sonnet-20241022'),
+  model: anthropic('claude-sonnet-4-20250514'),
   prompt: 'Your prompt here'
 });
 
 // Structured generation
 const { object } = await generateObject({
-  model: anthropic('claude-3-5-sonnet-20241022'),
+  model: anthropic('claude-sonnet-4-20250514'),
   schema: yourZodSchema,
   prompt: 'Your prompt here'
 });
