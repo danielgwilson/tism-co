@@ -23,6 +23,7 @@ type AutismScore = {
   profileData?: {
     handle: string;
     bio: string;
+    displayName: string;
     stats: {
       tweets: string;
       following: string;
@@ -98,21 +99,11 @@ export default function ResultsPage() {
   useEffect(() => {
     const generateScore = async () => {
       try {
-        // Simulate loading progress
-        const steps = [
-          { text: '📊 Reading your tweets...', progress: 25 },
-          { text: '🔍 Calculating autism energy...', progress: 50 },
-          { text: '💀 Generating savage roast...', progress: 75 },
-          { text: '🎯 Finalizing your score...', progress: 90 }
-        ];
-
-        // Animate through loading steps
-        for (const step of steps) {
-          setLoadingStep(step.text);
-          setLoadingProgress(step.progress);
-          await new Promise(resolve => setTimeout(resolve, 800));
-        }
-
+        // Real loading progress tied to actual steps
+        setLoadingStep('🚀 Opening browser session...');
+        setLoadingProgress(10);
+        
+        // Start the API call
         const response = await fetch('/api/score', {
           method: 'POST',
           headers: {
@@ -121,12 +112,25 @@ export default function ResultsPage() {
           body: JSON.stringify({ handle }),
         });
 
+        setLoadingStep('📊 Scraping Twitter profile...');
+        setLoadingProgress(40);
+        
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to generate score');
         }
 
+        setLoadingStep('🧠 AI analyzing your tweets...');
+        setLoadingProgress(70);
+        
         const data = await response.json();
+        
+        setLoadingStep('💀 Generating savage roast...');
+        setLoadingProgress(90);
+        
+        // Small delay for final step
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         setLoadingProgress(100);
         await new Promise(resolve => setTimeout(resolve, 300));
         setScoreData(data);
@@ -146,7 +150,7 @@ export default function ResultsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[100dvh] flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="min-h-[100dvh] flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-x-hidden">
         {/* Animated background elements - 2025 aesthetic */}
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
@@ -168,7 +172,7 @@ export default function ResultsPage() {
         
         {/* Main content */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
-          <div className="text-center space-y-8 max-w-md mx-auto">
+          <div className="text-center space-y-8 max-w-md mx-auto w-full">
             {/* Animated brain with modern glow */}
             <div className="relative">
               <div className="text-8xl animate-bounce filter drop-shadow-2xl">🧠</div>
@@ -178,9 +182,9 @@ export default function ResultsPage() {
             {/* Modern typography hierarchy */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <h1 className="text-4xl font-black text-white tracking-tight">
+                <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight break-words">
                   Analyzing 
-                  <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent ml-2">
+                  <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent ml-2 break-all">
                     @{handle}
                   </span>
                 </h1>
@@ -263,14 +267,14 @@ export default function ResultsPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-x-hidden">
       {/* Background elements - 2025 aesthetic */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-10 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 left-10 w-80 h-80 bg-pink-500/10 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-2xl mx-auto p-4 space-y-8">
+      <div className="relative z-10 max-w-2xl mx-auto p-4 space-y-8 w-full overflow-x-hidden">
         {/* Twitter Profile Header - Modern glassmorphism card */}
         {scoreData?.profileData && (
           <div className="mt-6 backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl">
@@ -288,11 +292,11 @@ export default function ResultsPage() {
               {/* Profile Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0 flex-1">
                     <h2 className="text-xl font-bold text-white truncate">
-                      {handle === 'arthurmacwaters' ? 'Arthur MacWaters' : handle === 'the_danny_g' ? 'Danny G' : handle}
+                      {scoreData?.profileData?.displayName || handle}
                     </h2>
-                    <p className="text-gray-400 text-sm">@{handle}</p>
+                    <p className="text-gray-400 text-sm truncate">@{handle}</p>
                   </div>
                   
                   {/* Stats - Modern pill design */}
