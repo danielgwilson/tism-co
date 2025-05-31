@@ -21,19 +21,20 @@ const FullAnalysisSchema = z.object({
     isVerifiedRealData: z.boolean(),
   }),
   // Score generation
-  totalScore: z.number().min(0).max(800),
+  totalScore: z.number(),
   categories: z.object({
-    terminalTism: z.number().min(0).max(100),
-    snowflakeMode: z.number().min(0).max(100),
-    social404: z.number().min(0).max(100),
-    meltdownFreq: z.number().min(0).max(100),
-    stimLevel: z.number().min(0).max(100),
-    executiveFunction: z.number().min(0).max(100),
-    maskingGame: z.number().min(0).max(100),
-    autismRadar: z.number().min(0).max(100),
+    terminalTism: z.number(),
+    snowflakeMode: z.number(),
+    social404: z.number(),
+    meltdownFreq: z.number(),
+    stimLevel: z.number(),
+    executiveFunction: z.number(),
+    maskingGame: z.number(),
+    autismRadar: z.number(),
   }),
   roast: z.string(),
   archetype: z.string(),
+  shareMessage: z.string(),
 });
 
 // Hybrid Apify approach: Premium profile scraper + Tweet scraper
@@ -237,7 +238,7 @@ Based on the extracted profile data, generate autism trait scores:
 3. Aura (NOT) (0-100) - Communication style, social awareness
 4. Toddler Mode (0-100) - Change resistance, emotional regulation (NOT)
 5. Stim Level (0-100) - Posting frequency, restless energy
-6. Brainrot Mode (0-100) - Scattered topics, organization
+6. Skibidi Brainrot Mode (0-100) - Scattered topics, organization
 7. Imitation Game: Faker Level (0-100) - Professional vs personal voice differences
 8. Rain Man Vibes (0-100) - Pattern recognition, analytical thinking
 
@@ -253,7 +254,17 @@ Write a brutal but funny roast that:
 
 Total score should be sum of all categories.
 
-Generate a creative archetype name that's unique to their personality (not generic like "The Overthinker").`,
+Generate a creative archetype name that's unique to their personality (not generic like "The Overthinker").
+
+STEP 4 - GENERATE PERSONALIZED SHARE MESSAGE:
+Create a Twitter share message that sounds like it was written by THIS specific user based on their tweets:
+- Analyze their writing style, vocabulary, and tone from their actual tweets
+- Use their typical slang, expressions, and communication patterns
+- Match their energy level (casual/formal, excited/chill, etc.)
+- Include their score naturally in their voice
+- Keep it under 200 characters for Twitter
+- Make it sound authentic to them, not generic
+- Reference tism.co for others to try`,
       temperature: 0.8,
     });
 
@@ -267,6 +278,7 @@ Generate a creative archetype name that's unique to their personality (not gener
       categories: object.categories,
       roast: object.roast,
       archetype: object.archetype,
+      shareMessage: object.shareMessage,
     });
   } catch (error) {
     console.error('Score generation error:', error);
