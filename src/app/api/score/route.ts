@@ -58,7 +58,7 @@ async function getTwitterProfileData(handle: string) {
     'https://api.apify.com/v2/acts/kaitoeasyapi~twitter-x-data-tweet-scraper-pay-per-result-cheapest/run-sync-get-dataset-items';
   const tweetsInput = {
     from: handle,
-    maxItems: 30, // Limit tweets for cost control
+    maxItems: 20, // Limit tweets for cost control
     lang: 'en',
   };
 
@@ -224,10 +224,7 @@ Total Tweets: ${profileData.stats.tweets}
 Verified: ${profileData.isVerified}
 
 RECENT TWEETS FOR ANALYSIS:
-${profileData.tweets
-  .slice(0, 15)
-  .map((tweet: string) => `"${tweet}"`)
-  .join('\n')}
+${profileData.tweets.map((tweet: string) => `"${tweet}"`).join('\n')}
 
 REQUIREMENTS:
 1. Fill profileData object with the exact data provided above
@@ -235,14 +232,14 @@ REQUIREMENTS:
 3. Generate autism trait scores (0-100 each):
 Based on the extracted profile data, generate autism trait scores:
 
-1. 'Tism Level: Terminal (0-100) - Obsessive posting patterns, hyperfocus energy
-2. Sensory Overload: Snowflake Mode (0-100) - Overstimulation complaints, sensitivity 
-3. Social Skills: 404 Error (0-100) - Communication style, social awareness
-4. Meltdown Frequency: Toddler Mode (0-100) - Change resistance, emotional regulation
-5. Stim Level: Can't Sit Still Disorder (0-100) - Posting frequency, restless energy
-6. Executive Function: Broken Brain Mode (0-100) - Scattered topics, organization
-7. Masking Game: Faker Level (0-100) - Professional vs personal voice differences
-8. Autism Radar: Rain Man Vibes (0-100) - Pattern recognition, analytical thinking
+1. Tism Level: Terminal (0-100) - Obsessive posting patterns, hyperfocus energy
+2. Snowflake Mode (0-100) - Overstimulation complaints, sensitivity 
+3. Aura (NOT) (0-100) - Communication style, social awareness
+4. Toddler Mode (0-100) - Change resistance, emotional regulation (NOT)
+5. Stim Level (0-100) - Posting frequency, restless energy
+6. Brainrot Mode (0-100) - Scattered topics, organization
+7. Imitation Game: Faker Level (0-100) - Professional vs personal voice differences
+8. Rain Man Vibes (0-100) - Pattern recognition, analytical thinking
 
 STEP 3 - GENERATE SAVAGE ROAST:
 Write a brutal but funny roast that:
@@ -254,9 +251,13 @@ Write a brutal but funny roast that:
 - Use creative metaphors related to their actual interests/topics
 - Could ONLY apply to this specific person - make it impossible to copy-paste to someone else
 
-Total score should be sum of all categories. Generate a creative archetype name that's unique to their personality (not generic like "The Overthinker").`,
+Total score should be sum of all categories.
+
+Generate a creative archetype name that's unique to their personality (not generic like "The Overthinker").`,
       temperature: 0.8,
     });
+
+    console.dir(object, { depth: null });
 
     return NextResponse.json({
       success: true,
