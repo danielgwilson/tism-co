@@ -36,7 +36,7 @@ const FullAnalysisSchema = z.object({
   archetype: z.string()
 });
 
-// Apify Twitter scraper integration
+// Hybrid Apify approach: Premium profile scraper + Tweet scraper
 async function getTwitterProfileData(handle: string) {
   const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
   
@@ -44,68 +44,99 @@ async function getTwitterProfileData(handle: string) {
     throw new Error('APIFY_API_TOKEN environment variable is required');
   }
   
-  console.log(`[APIFY] Scraping Twitter data for @${handle}`);
+  console.log(`[APIFY] Fetching comprehensive Twitter data for @${handle}`);
   
-  // Apify actor endpoint for synchronous execution with immediate results
-  const apifyUrl = 'https://api.apify.com/v2/acts/kaitoeasyapi~twitter-x-data-tweet-scraper-pay-per-result-cheapest/run-sync-get-dataset-items';
+  // 1. Get high-quality profile data from Premium Profile Scraper
+  const profileUrl = 'https://api.apify.com/v2/acts/kaitoeasyapi~premium-twitter-user-scraper-pay-per-result/run-sync-get-dataset-items';
+  const profileInput = {
+    user_names: [handle]  // Premium scraper uses user_names array
+  };
   
-  // Input configuration for the Twitter scraper
-  const apifyInput = {
-    from: handle,           // Target user handle
-    maxItems: 30,          // Limit tweets (cost control: 30 tweets = ~$0.0075)
-    lang: 'en',            // English tweets only
-    includeUserInfo: true  // Include user profile data
+  // 2. Get recent tweets from Tweet Scraper
+  const tweetsUrl = 'https://api.apify.com/v2/acts/kaitoeasyapi~twitter-x-data-tweet-scraper-pay-per-result-cheapest/run-sync-get-dataset-items';
+  const tweetsInput = {
+    from: handle,
+    maxItems: 20,          // Limit tweets for cost control
+    lang: 'en'
   };
   
   try {
-    console.log(`[APIFY] Making request to Apify with input:`, apifyInput);
+    // Make both API calls in parallel for speed
+    console.log(`[APIFY] Making parallel requests for profile + tweets`);
     
-    const response = await fetch(apifyUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${APIFY_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(apifyInput)
-    });
+    const [profileResponse, tweetsResponse] = await Promise.all([
+      fetch(profileUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${APIFY_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profileInput)
+      }),
+      fetch(tweetsUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${APIFY_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(tweetsInput)
+      })
+    ]);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[APIFY] HTTP Error ${response.status}:`, errorText);
-      throw new Error(`Apify API returned ${response.status}: ${errorText}`);
+    if (!profileResponse.ok) {
+      const errorText = await profileResponse.text();
+      console.error(`[APIFY] Profile API Error ${profileResponse.status}:`, errorText);
+      throw new Error(`Profile scraper failed: ${profileResponse.status}`);
     }
     
-    const data = await response.json();
-    console.log(`[APIFY] Successfully retrieved ${data.length} items from Apify`);
-    
-    if (!data || data.length === 0) {
-      throw new Error(`No data returned for @${handle}. Profile may be private or non-existent.`);
+    if (!tweetsResponse.ok) {
+      const errorText = await tweetsResponse.text();
+      console.error(`[APIFY] Tweets API Error ${tweetsResponse.status}:`, errorText);
+      throw new Error(`Tweet scraper failed: ${tweetsResponse.status}`);
     }
     
-    // Extract profile data and tweets from Apify response
-    const firstTweet = data[0];
-    const author = firstTweet.author;
+    const [profileData, tweetsData] = await Promise.all([
+      profileResponse.json(),
+      tweetsResponse.json()
+    ]);
     
-    const profileData = {
-      handle: author.userName,
-      displayName: author.name,
-      bio: author.description || author.profile_bio?.description || '',
+    console.log(`[APIFY] Profile data:`, profileData?.length || 0, 'profiles');
+    console.log(`[APIFY] Tweets data:`, tweetsData?.length || 0, 'tweets');
+    
+    if (!profileData || profileData.length === 0) {
+      throw new Error(`No profile data found for @${handle}. Profile may be private or non-existent.`);
+    }
+    
+    // Extract rich profile data from premium scraper
+    const userProfile = profileData[0];
+    
+    // Extract tweets from tweet scraper
+    const tweets = tweetsData?.map((tweet: { text?: string }) => tweet.text).filter(Boolean) || [];
+    
+    // Combine both data sources
+    const combinedProfileData = {
+      handle: userProfile.core?.screen_name || handle,
+      displayName: userProfile.core?.name || handle,
+      bio: userProfile.profile_bio?.description || '',
       stats: {
-        followers: author.followers?.toString() || '0',
-        following: author.following?.toString() || '0',
-        tweets: author.statusesCount?.toString() || '0'
+        followers: userProfile.relationship_counts?.followers?.toString() || '0',
+        following: userProfile.relationship_counts?.following?.toString() || '0',
+        tweets: userProfile.tweet_counts?.tweets?.toString() || '0'
       },
-      isVerified: author.isVerified || author.isBlueVerified || false,
-      profilePicture: author.profilePicture || '',
-      tweets: data.map((tweet: { text?: string }) => tweet.text).filter(Boolean)
+      isVerified: userProfile.verification?.is_blue_verified || false,
+      profilePicture: userProfile.avatar?.image_url || '',
+      location: userProfile.location?.location || '',
+      website: userProfile.website?.url || '',
+      createdAt: userProfile.core?.created_at || '',
+      tweets: tweets
     };
     
-    console.log(`[APIFY] Extracted profile for @${profileData.handle} with ${profileData.tweets.length} tweets`);
+    console.log(`[APIFY] Combined data for @${combinedProfileData.handle}: ${tweets.length} tweets, ${combinedProfileData.stats.followers} followers`);
     
-    return profileData;
+    return combinedProfileData;
     
   } catch (error) {
-    console.error(`[APIFY] Failed to scrape @${handle}:`, error);
+    console.error(`[APIFY] Hybrid scraping failed for @${handle}:`, error);
     throw new Error(`Failed to fetch Twitter data for @${handle}: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -151,15 +182,19 @@ export async function POST(request: NextRequest) {
 
 TASK: Analyze the provided Twitter profile data and generate a personalized 'TISM score with brutal roasting.
 
-PROFILE DATA:
+COMPREHENSIVE PROFILE DATA:
 Handle: @${profileData.handle}
-Name: ${profileData.displayName}
+Display Name: ${profileData.displayName}
 Bio: ${profileData.bio}
+Location: ${profileData.location || 'Not specified'}
+Website: ${profileData.website || 'None'}
+Account Created: ${profileData.createdAt || 'Unknown'}
 Followers: ${profileData.stats.followers}
 Following: ${profileData.stats.following}
 Total Tweets: ${profileData.stats.tweets}
+Verified: ${profileData.isVerified}
 
-RECENT TWEETS:
+RECENT TWEETS FOR ANALYSIS:
 ${profileData.tweets.slice(0, 15).map((tweet: string) => `"${tweet}"`).join('\n')}
 
 REQUIREMENTS:
