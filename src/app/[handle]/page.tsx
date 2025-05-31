@@ -100,7 +100,7 @@ export default function ResultsPage() {
     const generateScore = async () => {
       try {
         // Real loading progress tied to actual steps
-        setLoadingStep('🚀 Opening browser session...');
+        setLoadingStep('🚀 Connecting to Twitter API...');
         setLoadingProgress(10);
         
         // Start the API call
@@ -112,7 +112,7 @@ export default function ResultsPage() {
           body: JSON.stringify({ handle }),
         });
 
-        setLoadingStep('📊 Scraping Twitter profile...');
+        setLoadingStep('📊 Extracting profile data...');
         setLoadingProgress(40);
         
         if (!response.ok) {

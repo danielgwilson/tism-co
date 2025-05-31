@@ -2,8 +2,6 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
-import { Browserbase } from '@browserbasehq/sdk';
-import { chromium } from 'playwright-core';
 
 // CRITICAL: ONLY USING VERCEL AI SDK AS REQUIRED
 // Schema for AI to extract profile data AND generate scores
@@ -38,77 +36,77 @@ const FullAnalysisSchema = z.object({
   archetype: z.string()
 });
 
-// Simplified: Just get raw page content for AI to analyze
-async function getTwitterPageContent(handle: string): Promise<string> {
-  const BROWSERBASE_API_KEY = 'bb_live_SqRL9y81J0I9x4RXSRFiazq5K18';
-  const BROWSERBASE_PROJECT_ID = 'c99e8e20-f366-4df4-b1f9-2727ce56d1c5';
+// Apify Twitter scraper integration
+async function getTwitterProfileData(handle: string) {
+  const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
   
-  console.log(`[PAGE FETCH] Getting raw content for @${handle}`);
+  if (!APIFY_API_TOKEN) {
+    throw new Error('APIFY_API_TOKEN environment variable is required');
+  }
   
-  const bb = new Browserbase({ apiKey: BROWSERBASE_API_KEY });
+  console.log(`[APIFY] Scraping Twitter data for @${handle}`);
+  
+  // Apify actor endpoint for synchronous execution with immediate results
+  const apifyUrl = 'https://api.apify.com/v2/acts/kaitoeasyapi~twitter-x-data-tweet-scraper-pay-per-result-cheapest/run-sync-get-dataset-items';
+  
+  // Input configuration for the Twitter scraper
+  const apifyInput = {
+    from: handle,           // Target user handle
+    maxItems: 30,          // Limit tweets (cost control: 30 tweets = ~$0.0075)
+    lang: 'en',            // English tweets only
+    includeUserInfo: true  // Include user profile data
+  };
   
   try {
-    // Create session
-    const session = await bb.sessions.create({
-      projectId: BROWSERBASE_PROJECT_ID,
-      timeout: 300,
-      browserSettings: {
-        viewport: { width: 1280, height: 720 },
-        blockAds: true,
-        solveCaptchas: true
-      }
+    console.log(`[APIFY] Making request to Apify with input:`, apifyInput);
+    
+    const response = await fetch(apifyUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${APIFY_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apifyInput)
     });
     
-    console.log(`[PAGE FETCH] Created session: ${session.id}`);
-    
-    // Connect with Playwright
-    const browser = await chromium.connectOverCDP(session.connectUrl);
-    const defaultContext = browser.contexts()[0];
-    const page = defaultContext.pages()[0];
-    
-    // Navigate and wait for content
-    await page.goto(`https://x.com/${handle}`, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 30000 
-    });
-    
-    // Wait for page to load
-    await page.waitForTimeout(8000);
-    
-    // Scroll to load more content
-    console.log('[PAGE FETCH] Scrolling to load more content...');
-    for (let i = 0; i < 5; i++) {
-      await page.evaluate(() => {
-        window.scrollTo(0, document.body.scrollHeight);
-      });
-      await page.waitForTimeout(2000);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[APIFY] HTTP Error ${response.status}:`, errorText);
+      throw new Error(`Apify API returned ${response.status}: ${errorText}`);
     }
     
-    // Get the full page content
-    const pageContent = await page.evaluate(() => {
-      // Get both the full text and relevant HTML structure
-      return {
-        text: document.body.innerText,
-        title: document.title,
-        url: window.location.href
-      };
-    });
+    const data = await response.json();
+    console.log(`[APIFY] Successfully retrieved ${data.length} items from Apify`);
     
-    // Clean up
-    try {
-      await browser.close();
-      console.log('[CLEANUP] Browser closed successfully');
-    } catch (cleanupError) {
-      console.warn('[CLEANUP] Browser cleanup failed (non-critical):', cleanupError);
+    if (!data || data.length === 0) {
+      throw new Error(`No data returned for @${handle}. Profile may be private or non-existent.`);
     }
     
-    console.log(`[PAGE FETCH] Retrieved ${pageContent.text.length} characters of content`);
+    // Extract profile data and tweets from Apify response
+    const firstTweet = data[0];
+    const author = firstTweet.author;
     
-    return pageContent.text;
+    const profileData = {
+      handle: author.userName,
+      displayName: author.name,
+      bio: author.description || author.profile_bio?.description || '',
+      stats: {
+        followers: author.followers?.toString() || '0',
+        following: author.following?.toString() || '0',
+        tweets: author.statusesCount?.toString() || '0'
+      },
+      isVerified: author.isVerified || author.isBlueVerified || false,
+      profilePicture: author.profilePicture || '',
+      tweets: data.map((tweet: { text?: string }) => tweet.text).filter(Boolean)
+    };
+    
+    console.log(`[APIFY] Extracted profile for @${profileData.handle} with ${profileData.tweets.length} tweets`);
+    
+    return profileData;
     
   } catch (error) {
-    console.error(`[PAGE FETCH] Failed for @${handle}:`, error);
-    throw new Error(`Failed to fetch Twitter page for @${handle}: ${error}`);
+    console.error(`[APIFY] Failed to scrape @${handle}:`, error);
+    throw new Error(`Failed to fetch Twitter data for @${handle}: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -126,46 +124,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid Twitter handle' }, { status: 400 });
     }
 
-    // Get raw page content with Browserbase
-    console.log(`[API] Fetching page content for @${sanitizedHandle}`);
+    // Get structured profile data from Apify
+    console.log(`[API] Fetching Twitter data for @${sanitizedHandle} via Apify`);
     
-    let pageContent;
+    let profileData;
     try {
-      pageContent = await getTwitterPageContent(sanitizedHandle);
+      profileData = await getTwitterProfileData(sanitizedHandle);
     } catch (error) {
-      console.error(`[API] Page fetch failed for @${sanitizedHandle}:`, error);
+      console.error(`[API] Apify scraping failed for @${sanitizedHandle}:`, error);
       return NextResponse.json(
         { 
-          error: `Unable to fetch Twitter page for @${sanitizedHandle}. Browser automation may be temporarily unavailable.`,
-          suggestion: 'Try again in a moment, or check that the Twitter handle exists and is public.'
+          error: `Unable to fetch Twitter data for @${sanitizedHandle}. The profile may be private, suspended, or non-existent.`,
+          suggestion: 'Please verify the handle exists and is public, then try again.'
         }, 
         { status: 503 }
       );
     }
     
-    // Let Claude do ALL the extraction + scoring + roasting from raw content
-    console.log(`[API] Sending ${pageContent.length} characters to Claude for full analysis`);
+    // Send structured data to Claude for scoring and roasting
+    console.log(`[API] Sending structured profile data to Claude for analysis`);
     
     const { object } = await generateObject({
       model: anthropic('claude-3-5-sonnet-20241022'),
       schema: FullAnalysisSchema,
       prompt: `You are an expert at analyzing Twitter profiles and generating savage autism trait scores with brutal accuracy and dark humor.
 
-TASK: Extract profile data from this raw Twitter page content, then generate a personalized 'TISM score.
+TASK: Analyze the provided Twitter profile data and generate a personalized 'TISM score with brutal roasting.
 
-RAW TWITTER PAGE CONTENT for @${sanitizedHandle}:
-${pageContent}
+PROFILE DATA:
+Handle: @${profileData.handle}
+Name: ${profileData.displayName}
+Bio: ${profileData.bio}
+Followers: ${profileData.stats.followers}
+Following: ${profileData.stats.following}
+Total Tweets: ${profileData.stats.tweets}
 
-STEP 1 - EXTRACT PROFILE DATA:
-From the raw content above, extract:
-- Bio/description 
-- Display name
-- Follower count, following count, tweet count
-- Recent tweets (find 10-15 actual tweet texts)
-- Set profileFound to true if this looks like a valid Twitter profile
-- Set isVerifiedRealData to true (this is real scraped data)
+RECENT TWEETS:
+${profileData.tweets.slice(0, 15).map(tweet => `"${tweet}"`).join('\n')}
 
-STEP 2 - GENERATE 'TISM SCORE:
+REQUIREMENTS:
+1. Fill profileData object with the exact data provided above
+2. Set profileFound: true and isVerifiedRealData: true
+3. Generate autism trait scores (0-100 each):
 Based on the extracted profile data, generate autism trait scores:
 
 1. 'Tism Level: Terminal (0-100) - Obsessive posting patterns, hyperfocus energy

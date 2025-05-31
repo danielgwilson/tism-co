@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
-    "@browserbasehq/sdk": "^2.6.0",
     "@radix-ui/react-slot": "^1.2.3",
     "@vercel/analytics": "^1.5.0",
     "ai": "^4.3.16",
@@ -20,7 +19,6 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.511.0",
     "next": "15.3.3",
-    "playwright-core": "^1.52.0",
     "puppeteer": "^24.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -30,13 +28,13 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
+    "@types/node": "20.17.57",
+    "@types/react": "19.1.6",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.2",
-    "typescript": "^5"
+    "typescript": "5.8.3"
   }
 }
