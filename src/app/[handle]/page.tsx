@@ -509,7 +509,7 @@ export default function ResultsPage() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 hover:border-white/20 transition-all duration-200 group"
             >
               <img 
-                src="https://pbs.twimg.com/profile_images/1881838322134249472/M_Q0lm6Y_400x400.jpg"
+                src="/the_danny_g-avatar.jpg"
                 alt="@the_danny_g"
                 className="w-6 h-6 rounded-full object-cover ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-200"
               />
