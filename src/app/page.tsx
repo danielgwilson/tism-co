@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AutismAwarenessBanner } from "@/components/ui/autism-awareness-banner";
+import { Info } from "lucide-react";
 
 export default function Home() {
   const [handle, setHandle] = useState("");
@@ -27,11 +27,8 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="container mx-auto px-4 py-8">
-        {/* Autism Awareness Section */}
-        <AutismAwarenessBanner className="mb-8" />
-        
         {/* Main App Interface */}
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center justify-center min-h-[70vh]">
           <div className="w-full max-w-md mx-auto text-center space-y-8">
         {/* Header */}
         <div className="space-y-4">
@@ -74,6 +71,19 @@ export default function Home() {
             )}
           </Button>
         </form>
+
+        {/* Autism Awareness Link */}
+        <div className="mt-3">
+          <a 
+            href="https://www.autismspeaks.org/autism-response-team" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-300 transition-colors"
+          >
+            <Info className="w-3 h-3" />
+            <span>Learn about autism awareness</span>
+          </a>
+        </div>
 
             {/* Footer */}
             <div className="text-xs text-gray-500 space-y-3">
