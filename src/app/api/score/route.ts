@@ -140,7 +140,8 @@ async function getTwitterProfileData(handle: string) {
         tweets: userProfile.tweet_counts?.tweets?.toString() || '0',
       },
       isVerified: userProfile.verification?.is_blue_verified || false,
-      profilePicture: userProfile.avatar?.image_url || '',
+      profilePicture: userProfile.avatar?.image_url ? 
+        userProfile.avatar.image_url.replace('_normal', '_400x400') : '',
       location: userProfile.location?.location || '',
       website: userProfile.website?.url || '',
       createdAt: userProfile.core?.created_at || '',
