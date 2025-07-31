@@ -91,6 +91,26 @@ export default function Home() {
                 <p className="text-blue-300 font-medium mb-1">🧠 From Memes to Meaning</p>
                 <p className="text-gray-400 text-xs">While we joke about autism traits, real support matters. 1 in 31 children has autism - let&apos;s turn viral engagement into genuine understanding.</p>
               </div>
+              
+              {/* Created by badge */}
+              <div className="flex justify-center">
+                <a 
+                  href="https://x.com/the_danny_g" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 hover:border-white/20 transition-all duration-200 group"
+                >
+                  <img 
+                    src="https://pbs.twimg.com/profile_images/1881838322134249472/M_Q0lm6Y_400x400.jpg"
+                    alt="@the_danny_g"
+                    className="w-6 h-6 rounded-full object-cover ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-200"
+                  />
+                  <span className="text-gray-400 group-hover:text-gray-300 transition-colors">
+                    Created by <span className="font-semibold text-white/80 group-hover:text-white">@the_danny_g</span>
+                  </span>
+                </a>
+              </div>
+              
               <div className="space-y-1">
                 <p>Built for AWS MCP Agents Hackathon</p>
                 <p>Uses public X profiles only</p>

@@ -500,6 +500,25 @@ export default function ResultsPage() {
 
         {/* Footer - Minimalist design */}
         <div className="text-center space-y-3 pb-12 pt-8">
+          {/* Created by badge */}
+          <div className="flex justify-center">
+            <a 
+              href="https://x.com/the_danny_g" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 hover:border-white/20 transition-all duration-200 group"
+            >
+              <img 
+                src="https://pbs.twimg.com/profile_images/1881838322134249472/M_Q0lm6Y_400x400.jpg"
+                alt="@the_danny_g"
+                className="w-6 h-6 rounded-full object-cover ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-200"
+              />
+              <span className="text-gray-400 group-hover:text-gray-300 transition-colors">
+                Created by <span className="font-semibold text-white/80 group-hover:text-white">@the_danny_g</span>
+              </span>
+            </a>
+          </div>
+          
           <div className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-4 py-2">
             <span className="text-xs text-gray-400">
               Built for AWS MCP Agents Hackathon 2025
