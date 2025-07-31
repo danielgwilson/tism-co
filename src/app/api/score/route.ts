@@ -273,7 +273,10 @@ Create a Twitter share message that sounds like it was written by THIS specific 
     return NextResponse.json({
       success: true,
       handle: sanitizedHandle,
-      profileData: object.profileData,
+      profileData: {
+        ...object.profileData,
+        profilePicture: profileData.profilePicture, // Add the actual profile picture URL from Apify
+      },
       totalScore: object.totalScore,
       categories: object.categories,
       roast: object.roast,

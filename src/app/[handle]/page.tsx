@@ -34,6 +34,7 @@ type AutismScore = {
     tweets: string[];
     profileFound: boolean;
     isVerifiedRealData: boolean;
+    profilePicture?: string;
   };
 };
 
@@ -294,9 +295,26 @@ export default function ResultsPage() {
         {scoreData?.profileData && (
           <div className="mt-6 backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl">
             <div className="flex items-start gap-4">
-              {/* Profile Picture - Dynamic gradient based on handle */}
+              {/* Profile Picture - Actual photo or fallback gradient */}
               <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-purple-500/25">
+                {scoreData?.profileData?.profilePicture ? (
+                  <img
+                    src={scoreData.profileData.profilePicture}
+                    alt={`${handle} profile`}
+                    className="w-16 h-16 rounded-2xl object-cover shadow-xl shadow-purple-500/25"
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallbackDiv = target.nextElementSibling as HTMLElement;
+                      if (fallbackDiv) fallbackDiv.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div 
+                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-purple-500/25"
+                  style={{ display: scoreData?.profileData?.profilePicture ? 'none' : 'flex' }}
+                >
                   {handle.charAt(0).toUpperCase()}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
